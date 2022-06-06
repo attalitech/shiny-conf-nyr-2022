@@ -1,11 +1,16 @@
 library(shiny)
 library(ggplot2)
+library(dplyr)
 
 ui <- fluidPage(
   sidebarLayout(
     sidebarPanel(
-      fileInput("file", "CSV file"),
-      uiOutput("field_chooser_ui")
+      checkboxInput("custom", "Choose my own file", value = FALSE),
+      conditionalPanel(
+        "input.custom",
+        fileInput("file", "Choose a file")
+      ),
+      uiOutput("vars_chooser")
     ),
     mainPanel(
       plotOutput("plot"),
@@ -15,19 +20,21 @@ ui <- fluidPage(
 )
 
 server <- function(input, output, session) {
-
-  # Load data
   full_data <- reactive({
-    read.csv(input$file$datapath)
+    if (input$custom) {
+      req(input$file)
+      read.csv(input$file$datapath)
+    } else {
+      mtcars
+    }
   })
 
-  # Subset for specified columns
   subset_data <- reactive({
+    req(full_data())
     full_data()[, c(input$xvar, input$yvar)]
   })
 
-  # Dynamic UI for variable names based on selected file
-  output$field_chooser_ui <- renderUI({
+  output$vars_chooser <- renderUI({
     col_names <- names(full_data())
     tagList(
       selectInput("xvar", "X variable", col_names),
@@ -35,13 +42,11 @@ server <- function(input, output, session) {
     )
   })
 
-  # Scatterplot of selected variables
   output$plot <- renderPlot({
     ggplot(subset_data(), aes_string(x = input$xvar, y = input$yvar)) +
       geom_point()
   })
 
-  # Summary of selected variables
   output$summary <- renderPrint({
     summary(subset_data())
   })
