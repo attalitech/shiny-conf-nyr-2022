@@ -30,7 +30,6 @@ server <- function(input, output, session) {
   })
 
   subset_data <- reactive({
-    req(full_data())
     full_data()[, c(input$xvar, input$yvar)]
   })
 
